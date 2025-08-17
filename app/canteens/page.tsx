@@ -9,9 +9,8 @@ import { Badge } from "@/components/ui/badge"
 import Image from "next/image"
 import Link from "next/link"
 import { motion } from "framer-motion"
-
-// Import SearchBar
 import SearchBar from "@/components/search-bar"
+import { isCanteenOpen } from "@/services/canteen-service"
 
 type CanteenApiItem = {
   canteenId: number
@@ -66,7 +65,9 @@ export default function CanteensPage() {
     const q = searchQuery.trim().toLowerCase()
     if (!q) return canteens
     return canteens.filter(
-      (c) => c.CanteenName.toLowerCase().includes(q) || (c.Location || "").toLowerCase().includes(q),
+      (c) =>
+        c.CanteenName.toLowerCase().includes(q) ||
+        (c.Location || "").toLowerCase().includes(q),
     )
   }, [canteens, searchQuery])
 
@@ -92,6 +93,35 @@ export default function CanteensPage() {
                 ? `${process.env.NEXT_PUBLIC_API_URL || ""}${canteen.poster}`
                 : "/placeholder.svg"
               const hours = [canteen.fromTime, canteen.ToTime].filter(Boolean).join(" - ")
+              const isOpen = isCanteenOpen(canteen.fromTime, canteen.ToTime)
+
+              const canteenCard = (
+                <Card className={`overflow-hidden ${isOpen ? "card-hover" : "opacity-50 cursor-not-allowed"}`}>
+                  <CardContent className="p-0">
+                    <div className="relative h-40">
+                      <Image src={imageUrl} alt={canteen.CanteenName} fill className="object-cover" />
+                      {canteen.accessTo ? (
+                        <Badge className="absolute right-2 top-2 bg-primary">{canteen.accessTo}</Badge>
+                      ) : null}
+                      {!isOpen && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                          <Badge variant="secondary" className="text-white bg-red-500">
+                            CLOSED
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4">
+                      <h3 className="text-lg font-semibold">{canteen.CanteenName}</h3>
+                      <p className="text-sm text-muted-foreground">{canteen.Location || ""}</p>
+                      <div className="mt-2 flex justify-between">
+                        <p className="text-xs text-muted-foreground">{hours ? `Hours: ${hours}` : ""}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+
               return (
                 <motion.div
                   key={canteen.canteenId}
@@ -99,27 +129,11 @@ export default function CanteensPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: index * 0.1 }}
                 >
-                  <Link href={`/canteen/${canteen.canteenId}`}>
-                    <Card className="card-hover overflow-hidden">
-                      <CardContent className="p-0">
-                        <div className="relative h-40">
-                          <Image src={imageUrl} alt={canteen.CanteenName} fill className="object-cover" />
-                          {canteen.accessTo ? (
-                            <Badge className="absolute right-2 top-2 bg-primary">{canteen.accessTo}</Badge>
-                          ) : null}
-                        </div>
-                        <div className="p-4">
-                          <h3 className="text-lg font-semibold">{canteen.CanteenName}</h3>
-                          <p className="text-sm text-muted-foreground">{canteen.Location || ""}</p>
-                          <div className="mt-2 flex justify-between">
-                            <p className="text-xs text-muted-foreground">
-                              {hours ? `Hours: ${hours}` : ""}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
+                  {isOpen ? (
+                    <Link href={`/canteen/${canteen.canteenId}`}>{canteenCard}</Link>
+                  ) : (
+                    <div className="cursor-not-allowed">{canteenCard}</div>
+                  )}
                 </motion.div>
               )
             })}
